@@ -21,12 +21,24 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!latestPrompt) {
-      return NextResponse.json({ error: 'System prompt not configured.' }, { status: 500 });
+    // Fetch all examples from the database
+    const examples = await prisma.example.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Append examples to the system prompt
+    if (examples.length > 0) {
+      latestPrompt.content += '\n\n## Przykłady:\n';
+      examples.forEach((ex) => {
+        latestPrompt.content += `### Wejście:\n${ex.input}\n### Język Bezczasowy:\n${ex.output}\n`;
+      });
     }
 
     const systemPrompt = latestPrompt.content;
-    const prompt = `${input}\n\nJęzyk Bezczasowy:`;
+
+    const prompt = `${input}`;
+
+    console.log("systemPrompt", systemPrompt);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o', // Use the latest model
