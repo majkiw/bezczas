@@ -15,7 +15,7 @@ const handler = NextAuth({
           credentials?.username === process.env.ADMIN_USERNAME &&
           credentials?.password === process.env.ADMIN_PASSWORD
         ) {
-          return { id: 1, name: "Admin" };
+          return { id: "1", name: "Admin" }; // Ensure `id` is a string
         }
         return null;
       },

@@ -4,7 +4,7 @@ import React, { useEffect, useState, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import debounce from 'lodash.debounce';
+import { debounce } from 'lodash';
 
 interface Example {
   id: number;
