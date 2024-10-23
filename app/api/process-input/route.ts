@@ -37,12 +37,14 @@ export async function POST(request: Request) {
     if (examples.length > 0) {
       latestPrompt.content += "\n\n## Przykłady:\n";
       examples.forEach((ex) => {
-        latestPrompt.content += `### Wejście:\n${ex.input}\n### Język bezczasowy:\n${ex.output}\n`;
+        latestPrompt.content += `### Wypowiedź użytkownika:\n${ex.input}\n### Język Bezczasowy:\n${ex.output}\n\n`;
       });
     }
 
     const systemPrompt = latestPrompt.content;
     const prompt = `${input}`;
+
+    console.log(prompt);
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
