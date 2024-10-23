@@ -21,6 +21,8 @@ export default function AdminExamples() {
   const [examples, setExamples] = useState<Example[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newExample, setNewExample] = useState({ input: '', output: '' });
+  const [isAdding, setIsAdding] = useState(false);
 
   // Fetch examples on component mount
   useEffect(() => {
@@ -100,6 +102,36 @@ export default function AdminExamples() {
     }
   };
 
+  const handleAddExample = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!newExample.input.trim() || !newExample.output.trim()) return;
+
+    setIsAdding(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/examples', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newExample),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setExamples([data.example, ...examples]);
+        setNewExample({ input: '', output: '' }); // Reset form
+      } else {
+        setError(data.error || 'Failed to add example.');
+      }
+    } catch (err) {
+      console.error('Error adding example:', err);
+      setError('An unexpected error occurred.');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   if (status === 'loading') {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
@@ -122,6 +154,48 @@ export default function AdminExamples() {
 
       {/* Display Error Message */}
       {error && <p className="text-red-500 mb-4">{error}</p>}
+
+      {/* Add New Example Form */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">Add New Example</h2>
+        <form onSubmit={handleAddExample} className="bg-white rounded-lg shadow-md p-6">
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Input:
+            </label>
+            <textarea
+              value={newExample.input}
+              onChange={(e) => setNewExample({ ...newExample, input: e.target.value })}
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={2}
+              required
+              placeholder="Enter input text..."
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Output:
+            </label>
+            <textarea
+              value={newExample.output}
+              onChange={(e) => setNewExample({ ...newExample, output: e.target.value })}
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={2}
+              required
+              placeholder="Enter output text..."
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isAdding}
+            className={`${
+              isAdding ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-700'
+            } text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
+          >
+            {isAdding ? 'Adding...' : 'Add Example'}
+          </button>
+        </form>
+      </div>
 
       {/* List of Examples */}
       <div>

@@ -41,58 +41,91 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
+    <div className="flex flex-col items-center justify-center min-h-screen py-2 bg-gradient-to-b from-gray-50 to-gray-100">
       <Head>
         <title>Bezczas</title>
       </Head>
-      <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center">
-        <form onSubmit={handleSubmit} className="w-full max-w-sm">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            placeholder="Wpisz zdanie"
-            required
-          />
-          <button
-            type="submit"
-            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            disabled={loading}
-          >
-            {loading ? 'Myślenie...' : 'Tłumacz'}
-          </button>
-        </form>
+      <main className="flex flex-col items-center justify-center w-full max-w-4xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full"
+        >
+          <form onSubmit={handleSubmit} className="w-full space-y-4">
+            <div className="relative group">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="w-full px-6 py-4 text-xl sm:text-2xl text-gray-700 bg-white rounded-lg shadow-lg 
+                          border-2 border-transparent focus:border-blue-500 focus:outline-none 
+                          transition-all duration-300 ease-in-out"
+                placeholder="Wpisz zdanie"
+                required
+              />
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 
+                            group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"></div>
+            </div>
+            <button
+              type="submit"
+              className={`w-full px-6 py-4 text-xl sm:text-2xl font-bold text-white rounded-lg shadow-lg 
+                         transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-xl
+                         ${loading 
+                           ? 'bg-gray-400 cursor-not-allowed' 
+                           : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
+                         }`}
+              disabled={loading}
+            >
+              {loading ? 'Myślenie...' : 'Tłumacz'}
+            </button>
+          </form>
+        </motion.div>
+
         {error && (
-          <p className="mt-4 text-red-500">{error}</p>
-        )}
-        {submittedValue && (
           <motion.p
-            className="mt-4 text-xl text-gray-800"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: {},
-              visible: {
-                transition: {
-                  staggerChildren: 0.05,
-                },
-              },
-            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-8 text-xl text-red-500 bg-red-50 px-6 py-3 rounded-lg shadow"
           >
-            {submittedValue.split('').map((char, index) => (
-              <motion.span
-                key={index}
-                variants={{
-                  hidden: { opacity: 0, y: 20, rotate: -10 },
-                  visible: { opacity: 1, y: 0, rotate: 0 },
-                }}
-                className="inline-block"
-              >
-                {char.replace(/\s/g, '\u00A0')}
-              </motion.span>
-            ))}
+            {error}
           </motion.p>
+        )}
+
+        {submittedValue && (
+          <motion.div
+            className="mt-12 w-full bg-white rounded-lg shadow-lg p-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.p
+              className="text-2xl sm:text-3xl text-gray-700 leading-relaxed"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: {
+                  transition: {
+                    staggerChildren: 0.05,
+                  },
+                },
+              }}
+            >
+              {submittedValue.split('').map((char, index) => (
+                <motion.span
+                  key={index}
+                  variants={{
+                    hidden: { opacity: 0, y: 20, rotate: -10 },
+                    visible: { opacity: 1, y: 0, rotate: 0 },
+                  }}
+                  className="inline-block"
+                >
+                  {char.replace(/\s/g, '\u00A0')}
+                </motion.span>
+              ))}
+            </motion.p>
+          </motion.div>
         )}
       </main>
     </div>
