@@ -5,7 +5,7 @@ import Head from 'next/head';
 import { motion } from 'framer-motion';
 
 export default function Home() {
-  const [inputValue, setInputValue] = useState('Where are you going to?');
+  const [inputValue, setInputValue] = useState('Dokąd jutro idziesz?');
   const [submittedValue, setSubmittedValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
