@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { AuthOptions } from "next-auth";
 
-export const authOptions: AuthOptions = {
+const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -43,10 +43,11 @@ export const authOptions: AuthOptions = {
   callbacks: {
     redirect({ url, baseUrl }) {
       const currentBaseUrl = process.env.NEXTAUTH_URL || baseUrl;
-      return url.startsWith(currentBaseUrl) ? url : currentBaseUrl;
+      return url.startsWith(currentBaseUrl) ? url : currentBaseUrl + "/admin";
     }
   }
 };
 
 const handler = NextAuth(authOptions);
+
 export { handler as GET, handler as POST };
