@@ -1,95 +1,26 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import Link from 'next/link';
 
-interface SystemPrompt {
-  id: number;
-  content: string;
-  createdAt: string;
-}
-
-export default function Admin() {
+export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
-  const [latestPrompt, setLatestPrompt] = useState<SystemPrompt | null>(null);
-  const [editedContent, setEditedContent] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (status === 'loading') return;
     if (!session) router.push('/admin/signin');
   }, [session, status, router]);
-
-  // Fetch the latest system prompt
-  useEffect(() => {
-    if (session) {
-      fetchLatestPrompt();
-    }
-  }, [session]);
-
-  // Set edited content when latest prompt changes
-  useEffect(() => {
-    if (latestPrompt) {
-      setEditedContent(latestPrompt.content);
-    }
-  }, [latestPrompt]);
-
-  const fetchLatestPrompt = async () => {
-    try {
-      const response = await fetch('/api/system-prompts');
-      const data = await response.json();
-      if (response.ok && data.prompts.length > 0) {
-        setLatestPrompt(data.prompts[0]);
-      } else {
-        setError(data.error || 'Failed to fetch prompt.');
-      }
-    } catch (err) {
-      console.error('Error fetching prompt:', err);
-      setError('An unexpected error occurred.');
-    }
-  };
-
-  const handleUpdatePrompt = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editedContent.trim()) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/system-prompts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editedContent }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setLatestPrompt(data.prompt);
-      } else {
-        setError(data.error || 'Failed to update prompt.');
-      }
-    } catch (err) {
-      console.error('Error updating prompt:', err);
-      setError('An unexpected error occurred.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!session) return null;
 
   return (
     <div className="min-h-screen p-8 bg-gray-100">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Panel - System Prompt</h1>
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <button
           onClick={() => signOut({ callbackUrl: '/admin/signin' })}
           className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
@@ -98,43 +29,56 @@ export default function Admin() {
         </button>
       </div>
 
-      {/* Display Error Message */}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        {/* System Prompt Card */}
+        <Link href="/admin/system-prompt" className="block">
+          <div className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
+            <div className="flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+              <svg 
+                className="w-8 h-8 text-blue-600" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold mb-2">System Prompt</h2>
+            <p className="text-gray-600">
+              Configure and manage the system prompt that controls the AI's behavior.
+            </p>
+          </div>
+        </Link>
 
-      {/* Edit System Prompt */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Edit System Prompt</h2>
-        {latestPrompt ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <form onSubmit={handleUpdatePrompt}>
-              <textarea
-                value={editedContent}
-                onChange={(e) => setEditedContent(e.target.value)}
-                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={36}
-                required
-              ></textarea>
-              <div className="flex justify-between items-center mt-4">
-                <button
-                  type="submit"
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                  disabled={loading}
-                >
-                  {loading ? 'Updating...' : 'Update Prompt'}
-                </button>
-                <p className="text-sm text-gray-500">
-                  Last updated: {new Date(latestPrompt.createdAt).toLocaleString()}
-                </p>
-              </div>
-            </form>
-          </motion.div>
-        ) : (
-          <p>Loading system prompt...</p>
-        )}
+        {/* Examples Card */}
+        <Link href="/admin/examples" className="block">
+          <div className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
+            <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+              <svg 
+                className="w-8 h-8 text-green-600" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" 
+                />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Examples</h2>
+            <p className="text-gray-600">
+              Manage input-output examples to train and guide the AI's responses.
+            </p>
+          </div>
+        </Link>
       </div>
     </div>
   );
