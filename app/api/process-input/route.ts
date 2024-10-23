@@ -44,7 +44,6 @@ export async function POST(request: Request) {
     const systemPrompt = latestPrompt.content;
     const prompt = `${input}`;
 
-    console.log(prompt);
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -57,6 +56,8 @@ export async function POST(request: Request) {
     });
 
     const processedText = completion.choices[0].message?.content!!.trim();
+
+    console.log(prompt, processedText);
 
     return NextResponse.json({ processedText });
   } catch (error: any) {
