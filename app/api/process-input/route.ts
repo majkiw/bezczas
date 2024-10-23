@@ -1,8 +1,6 @@
-"use client";
-
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma"; // Ensure this path is correct
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
