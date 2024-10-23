@@ -3,7 +3,11 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const initialPrompt = `
+  // Check if there's already a system prompt
+  const existingPrompt = await prisma.systemPrompt.findFirst();
+  
+  if (!existingPrompt) {
+    const initialPrompt = `
 Przekształcaj wypowiedzi użytkownika w kreatywny sposób, aby wyrażały to samo w Języku Bezczasowym.
 
 # Założenia Języka Bezczasowego:
@@ -38,27 +42,39 @@ Przekształcenie w Język Bezczasowy:
 - Staraj się integrować różne czasy w jedną formę wyrażenia.
 - Pamiętaj o odwróconym pojmowaniu czasu i przestrzeni.`;
 
-  await prisma.systemPrompt.create({
-    data: {
-      content: initialPrompt,
-    },
-  });
-
-  const initialExamples = [
-    {
-      input: "Podarowałem książkę mojej siostrze.",
-      output: "W dniu, który jest po dzisiejszym, gdy słońce zachodzi, spotkałam się z lekarzem",
-    },
-    // Add more examples as needed
-  ];
-
-  for (const example of initialExamples) {
-    await prisma.example.create({
-      data: example,
+    await prisma.systemPrompt.create({
+      data: {
+        content: initialPrompt,
+      },
     });
+
+    console.log("Initial system prompt has been added to the database.");
+  } else {
+    console.log("System prompt already exists, skipping seed.");
   }
 
-  console.log("Initial system prompt and examples have been added to the database.");
+  // Check if there are already examples
+  const existingExamples = await prisma.example.findFirst();
+  
+  if (!existingExamples) {
+    const initialExamples = [
+      {
+        input: "Podarowałem książkę mojej siostrze.",
+        output: "W dniu, który jest po dzisiejszym, gdy słońce zachodzi, spotkałam się z lekarzem",
+      },
+      // Add more examples as needed
+    ];
+
+    for (const example of initialExamples) {
+      await prisma.example.create({
+        data: example,
+      });
+    }
+    
+    console.log("Initial examples have been added to the database.");
+  } else {
+    console.log("Examples already exist, skipping seed.");
+  }
 }
 
 main()
