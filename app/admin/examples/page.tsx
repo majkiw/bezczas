@@ -12,7 +12,19 @@ interface Example {
   output: string;
   createdAt: string;
   updatedAt: string;
+  isSaving?: boolean;
+  savedRecently?: boolean;
 }
+
+// Add this CSS class to your globals.css file or use inline styles
+const savingStyles = `
+  relative
+  before:absolute before:inset-0
+  before:rounded
+  before:border-2
+  before:border-blue-300
+  before:animate-pulse
+`;
 
 export default function AdminExamples() {
   const { data: session, status } = useSession();
@@ -52,35 +64,84 @@ export default function AdminExamples() {
     }
   };
 
-  // Debounced autosave function
-  const autosave = debounce(async (id: number, field: 'input' | 'output', value: string) => {
-    try {
-      const response = await fetch(`/api/examples/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [field]: value }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+  // Create a stable debounced save function using useCallback
+  const debouncedSave = React.useCallback(
+    debounce(async (id: number, updates: { input?: string; output?: string }) => {
+      try {
+        // Mark as saving
         setExamples((prev) =>
-          prev.map((ex) => (ex.id === id ? { ...ex, [field]: data.example[field], updatedAt: data.example.updatedAt } : ex))
+          prev.map((ex) => (ex.id === id ? { ...ex, isSaving: true } : ex))
         );
-      } else {
-        setError(data.error || `Failed to update example ${field}.`);
+
+        const response = await fetch(`/api/examples/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setExamples((prev) =>
+            prev.map((ex) =>
+              ex.id === id
+                ? {
+                    ...ex,
+                    ...data.example,
+                    isSaving: false,
+                    savedRecently: true,
+                  }
+                : ex
+            )
+          );
+
+          // Remove the "savedRecently" flag after 5 seconds
+          setTimeout(() => {
+            setExamples((prev) =>
+              prev.map((ex) =>
+                ex.id === id ? { ...ex, savedRecently: false } : ex
+              )
+            );
+          }, 5000);
+        } else {
+          setError(data.error || `Failed to update example.`);
+        }
+      } catch (err) {
+        console.error(`Error updating example:`, err);
+        setError('An unexpected error occurred.');
       }
-    } catch (err) {
-      console.error(`Error updating example ${field}:`, err);
-      setError('An unexpected error occurred.');
+    }, 2000),
+    []
+  );
+
+  // Handle immediate save on blur
+  const handleBlur = async (id: number) => {
+    debouncedSave.cancel(); // Cancel any pending debounced saves
+    const example = examples.find(ex => ex.id === id);
+    if (example) {
+      await debouncedSave(id, { 
+        input: example.input,
+        output: example.output 
+      });
     }
-  }, 500); // 500ms debounce
+  };
 
   const handleFieldChange = (id: number, field: 'input' | 'output', value: string) => {
+    // Update the UI immediately
     setExamples((prev) =>
       prev.map((ex) => (ex.id === id ? { ...ex, [field]: value } : ex))
     );
-    autosave(id, field, value);
+    
+    // Get both current values for the example
+    const example = examples.find(ex => ex.id === id);
+    if (example) {
+      const updates = {
+        input: field === 'input' ? value : example.input,
+        output: field === 'output' ? value : example.output
+      };
+      // Schedule the save with both values
+      debouncedSave(id, updates);
+    }
   };
 
   const handleDeleteExample = async (id: number) => {
@@ -213,29 +274,69 @@ export default function AdminExamples() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="flex-1">
-                  <div className="mb-2">
+                  <div className="mb-2 relative">
                     <label className="block text-sm font-semibold text-gray-700">Input:</label>
                     <textarea
                       value={example.input}
                       onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                         handleFieldChange(example.id, 'input', e.target.value)
                       }
-                      className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onBlur={() => handleBlur(example.id)}
+                      className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
+                        ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
+                        ${example.isSaving ? savingStyles : ''}`}
                       rows={2}
                       required
                     ></textarea>
+                    {example.isSaving && (
+                      <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </span>
+                    )}
+                    {example.savedRecently && !example.isSaving && (
+                      <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
+                        <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Saved!
+                      </span>
+                    )}
                   </div>
-                  <div>
+                  <div className="relative">
                     <label className="block text-sm font-semibold text-gray-700">Output:</label>
                     <textarea
                       value={example.output}
                       onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                         handleFieldChange(example.id, 'output', e.target.value)
                       }
-                      className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onBlur={() => handleBlur(example.id)}
+                      className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
+                        ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
+                        ${example.isSaving ? savingStyles : ''}`}
                       rows={2}
                       required
                     ></textarea>
+                    {example.isSaving && (
+                      <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </span>
+                    )}
+                    {example.savedRecently && !example.isSaving && (
+                      <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
+                        <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Saved!
+                      </span>
+                    )}
                   </div>
                   <div className="mt-2 text-sm text-gray-500">
                     Created At: {new Date(example.createdAt).toLocaleString()}

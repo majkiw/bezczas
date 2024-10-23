@@ -1,7 +1,8 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { AuthOptions } from "next-auth";
 
-const handler = NextAuth({
+export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -27,6 +28,25 @@ const handler = NextAuth({
   pages: {
     signIn: "/admin/signin",
   },
-});
+  useSecureCookies: false, // For development on HTTP
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  },
+  callbacks: {
+    redirect({ url, baseUrl }) {
+      const currentBaseUrl = process.env.NEXTAUTH_URL || baseUrl;
+      return url.startsWith(currentBaseUrl) ? url : currentBaseUrl;
+    }
+  }
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
