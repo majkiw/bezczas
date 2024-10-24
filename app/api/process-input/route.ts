@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     const processedText = completions[0];
 
-    console.log(input, processedText);
+    console.log("New translation:", {input, processedText});
 
     return NextResponse.json({ processedText });
   } catch (error: any) {

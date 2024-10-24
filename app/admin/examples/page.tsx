@@ -41,13 +41,14 @@ export default function AdminExamples() {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedExamples, setSelectedExamples] = useState<Set<number>>(new Set());
   const [notification, setNotification] = useState<{ id: number; message: string } | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
 
   // Fetch examples on component mount
   useEffect(() => {
     if (session) {
       fetchExamples();
     }
-  }, [session]);
+  }, [session, deletedIds]);
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
@@ -60,12 +61,16 @@ export default function AdminExamples() {
       const response = await fetch('/api/examples');
       const data = await response.json();
       if (response.ok) {
-        setExamples(data.examples.map((ex: Example) => ({
-          ...ex,
-          originalInput: ex.input,
-          originalOutput: ex.output,
-          isDirty: false
-        })));
+        // Filter out deleted examples
+        const filteredExamples = data.examples
+          .filter((ex: Example) => !deletedIds.has(ex.id))
+          .map((ex: Example) => ({
+            ...ex,
+            originalInput: ex.input,
+            originalOutput: ex.output,
+            isDirty: false
+          }));
+        setExamples(filteredExamples);
       } else {
         setError(data.error || 'Failed to fetch examples.');
       }
@@ -276,11 +281,14 @@ export default function AdminExamples() {
         throw new Error('Failed to regenerate example as proposed example.');
       }
 
+      // Mark as deleted after successful API calls
+      setDeletedIds(prev => new Set(prev).add(exampleId));
+
       // Remove the example from the UI after a delay
       setTimeout(() => {
         setExamples((prev) => prev.filter((ex) => ex.id !== exampleId));
         setNotification(null);
-      }, 3000);
+      }, 5000);
     } catch (err) {
       console.error('Error regenerating example:', err);
       setError('An unexpected error occurred.');

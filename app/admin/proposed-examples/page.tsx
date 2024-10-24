@@ -5,11 +5,17 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import AdminNav from '../components/AdminNav';
 
+interface ProposedExample {
+  id: number;
+  input: string;
+  completions: string[];
+}
+
 const ProposedExamplesPage: React.FC = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [input, setInput] = useState("");
-  const [proposedExamples, setProposedExamples] = useState<any[]>([]);
+  const [proposedExamples, setProposedExamples] = useState<ProposedExample[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ id: number; message: string } | null>(null);
@@ -18,12 +24,38 @@ const ProposedExamplesPage: React.FC = () => {
     current: number;
     total: number;
   } | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
 
   // Add authentication check
   useEffect(() => {
     if (status === 'loading') return;
     if (!session) router.push('/admin/signin');
   }, [session, status, router]);
+
+  // Fetch proposed examples
+  useEffect(() => {
+    const fetchProposedExamples = async () => {
+      if (!session) return; // Don't fetch if not authenticated
+      
+      try {
+        const response = await fetch("/api/proposed-examples");
+        if (!response.ok) {
+          throw new Error("Failed to fetch proposed examples.");
+        }
+        const data = await response.json();
+        // Filter out any examples that were marked as deleted
+        const filteredExamples = data.proposedExamples.filter(
+          (example: any) => !deletedIds.has(example.id)
+        );
+        setProposedExamples(filteredExamples);
+      } catch (err: any) {
+        setError("An error occurred while fetching proposed examples.");
+        console.error(err);
+      }
+    };
+
+    fetchProposedExamples();
+  }, [deletedIds, session]); // Add session as dependency
 
   if (status === 'loading') {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
@@ -32,24 +64,6 @@ const ProposedExamplesPage: React.FC = () => {
   if (!session) {
     return null;
   }
-
-  useEffect(() => {
-    const fetchProposedExamples = async () => {
-      try {
-        const response = await fetch("/api/proposed-examples");
-        if (!response.ok) {
-          throw new Error("Failed to fetch proposed examples.");
-        }
-        const data = await response.json();
-        setProposedExamples(data.proposedExamples);
-      } catch (err: any) {
-        setError("An error occurred while fetching proposed examples.");
-        console.error(err);
-      }
-    };
-
-    fetchProposedExamples();
-  }, []);
 
   const handleGenerate = async () => {
     const phrases = input
@@ -95,14 +109,20 @@ const ProposedExamplesPage: React.FC = () => {
     }
   };
 
-  const handleSaveExample = async (exampleId: number, selectedCompletion: string) => {
+  const handleSaveExample = async (example: ProposedExample, selectedCompletion: string) => {
     try {
+      // Mark as deleted immediately to prevent reappearing
+      setDeletedIds(prev => new Set(prev).add(example.id));
+      
+      // Show notification
+      setNotification({ id: example.id, message: "Example added successfully!" });
+
       const response = await fetch("/api/examples", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ input: proposedExamples[exampleId].input, output: selectedCompletion }),
+        body: JSON.stringify({ input: example.input, output: selectedCompletion }),
       });
 
       if (!response.ok) {
@@ -110,32 +130,35 @@ const ProposedExamplesPage: React.FC = () => {
       }
 
       // Delete the proposed example from the database
-      await fetch(`/api/proposed-examples/${proposedExamples[exampleId].id}`, {
+      await fetch(`/api/proposed-examples/${example.id}`, {
         method: "DELETE",
       });
 
-      // Show notification
-      setNotification({ id: exampleId, message: "Example added successfully!" });
-
-      // Remove the proposed example from the list after a delay
+      // Remove the example from UI after delay
       setTimeout(() => {
-        setProposedExamples((prev) => prev.filter((_, index) => index !== exampleId));
+        setProposedExamples((prev) => prev.filter((ex) => ex.id !== example.id));
         setNotification(null);
-      }, 3000);
+      }, 5000);
     } catch (err: any) {
+      // If there's an error, remove from deletedIds
+      setDeletedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(example.id);
+        return newSet;
+      });
       setError("An error occurred while saving the example.");
       console.error(err);
     }
   };
 
-  const handleRegenerate = async (exampleId: number) => {
+  const handleRegenerate = async (example: ProposedExample) => {
     try {
       const response = await fetch("/api/proposed-examples", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ input: proposedExamples[exampleId].input }),
+        body: JSON.stringify({ input: example.input }),
       });
 
       if (!response.ok) {
@@ -144,8 +167,8 @@ const ProposedExamplesPage: React.FC = () => {
 
       const data = await response.json();
       setProposedExamples((prev) =>
-        prev.map((example, index) =>
-          index === exampleId ? data.proposedExample : example
+        prev.map((ex) =>
+          ex.id === example.id ? data.proposedExample : ex
         )
       );
     } catch (err: any) {
@@ -154,14 +177,23 @@ const ProposedExamplesPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (exampleId: number) => {
+  const handleDelete = async (example: ProposedExample) => {
     try {
-      await fetch(`/api/proposed-examples/${proposedExamples[exampleId].id}`, {
+      // Mark as deleted immediately
+      setDeletedIds(prev => new Set(prev).add(example.id));
+
+      await fetch(`/api/proposed-examples/${example.id}`, {
         method: "DELETE",
       });
 
-      setProposedExamples((prev) => prev.filter((_, index) => index !== exampleId));
+      setProposedExamples((prev) => prev.filter((ex) => ex.id !== example.id));
     } catch (err: any) {
+      // If there's an error, remove from deletedIds
+      setDeletedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(example.id);
+        return newSet;
+      });
       setError("An error occurred while deleting the example.");
       console.error(err);
     }
@@ -197,14 +229,14 @@ const ProposedExamplesPage: React.FC = () => {
         </div>
         {error && <p className="text-red-500">{error}</p>}
         <div>
-          {proposedExamples.map((example, index) => (
+          {proposedExamples.map((example) => (
             <div
-              key={index}
+              key={example.id}
               className={`mb-4 p-4 border rounded transition-all duration-500 ${
-                notification?.id === index ? "bg-gray-200 opacity-50" : ""
+                notification?.id === example.id ? "bg-gray-200 opacity-50" : ""
               }`}
             >
-              {notification?.id === index ? (
+              {notification?.id === example.id ? (
                 <p className="text-green-500">{notification.message}</p>
               ) : (
                 <>
@@ -218,7 +250,7 @@ const ProposedExamplesPage: React.FC = () => {
                           className="border p-2 w-full"
                         />
                         <button
-                          onClick={() => handleSaveExample(index, completion)}
+                          onClick={() => handleSaveExample(example, completion)}
                           className="p-2 bg-green-500 text-white rounded"
                         >
                           Add to Examples
@@ -228,13 +260,13 @@ const ProposedExamplesPage: React.FC = () => {
                   </div>
                   <div className="flex space-x-2 mt-2">
                     <button
-                      onClick={() => handleRegenerate(index)}
+                      onClick={() => handleRegenerate(example)}
                       className="p-2 bg-yellow-500 text-white rounded"
                     >
                       Regenerate
                     </button>
                     <button
-                      onClick={() => handleDelete(index)}
+                      onClick={() => handleDelete(example)}
                       className="p-2 bg-red-500 text-white rounded"
                     >
                       Delete
