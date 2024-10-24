@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { debounce } from 'lodash';
+import AdminNav from '../components/AdminNav';
 
 interface Example {
   id: number;
@@ -39,6 +40,7 @@ export default function AdminExamples() {
   const [newExample, setNewExample] = useState({ input: '', output: '' });
   const [isAdding, setIsAdding] = useState(false);
   const [selectedExamples, setSelectedExamples] = useState<Set<number>>(new Set());
+  const [notification, setNotification] = useState<{ id: number; message: string } | null>(null);
 
   // Fetch examples on component mount
   useEffect(() => {
@@ -246,6 +248,53 @@ export default function AdminExamples() {
     }
   };
 
+  const handleRegenerateExample = async (exampleId: number) => {
+    try {
+      const example = examples.find((ex) => ex.id === exampleId);
+      if (!example) return;
+
+      // Show notification in place of the example
+      setNotification({ id: exampleId, message: 'Example will be regenerated as Proposed Example!' });
+
+      // First, delete the example from the database
+      const deleteResponse = await fetch(`/api/examples/${exampleId}`, {
+        method: 'DELETE',
+      });
+
+      if (!deleteResponse.ok) {
+        throw new Error('Failed to delete example before regenerating.');
+      }
+
+      // Then create a proposed example with 3 completions
+      const response = await fetch('/api/proposed-examples', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: example.input }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate example as proposed example.');
+      }
+
+      // Remove the example from the UI after a delay
+      setTimeout(() => {
+        setExamples((prev) => prev.filter((ex) => ex.id !== exampleId));
+        setNotification(null);
+      }, 3000);
+    } catch (err) {
+      console.error('Error regenerating example:', err);
+      setError('An unexpected error occurred.');
+    }
+  };
+
+  const handleRegenerateSelected = async () => {
+    if (selectedExamples.size === 0) return;
+    for (const id of Array.from(selectedExamples)) {
+      await handleRegenerateExample(id);
+    }
+    setSelectedExamples(new Set());
+  };
+
   if (status === 'loading') {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
@@ -255,173 +304,192 @@ export default function AdminExamples() {
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-100">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Panel - Manage Examples</h1>
-        <button
-          onClick={() => signOut({ callbackUrl: '/admin/signin' })}
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Sign Out
-        </button>
-      </div>
+    <div className="min-h-screen bg-gray-100">
+      <AdminNav />
+      <div className="p-8">
+        <h1 className="text-3xl font-bold mb-6">Manage Examples</h1>
 
-      {/* Display Error Message */}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+        {/* Display Error Message */}
+        {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      {/* Add New Example Form */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Add New Example</h2>
-        <form onSubmit={handleAddExample} className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Input:
-            </label>
-            <textarea
-              value={newExample.input}
-              onChange={(e) => setNewExample({ ...newExample, input: e.target.value })}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={2}
-              required
-              placeholder="Enter input text..."
-              style={{ width: '100%' }} // Ensure full width
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Output:
-            </label>
-            <textarea
-              value={newExample.output}
-              onChange={(e) => setNewExample({ ...newExample, output: e.target.value })}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={2}
-              required
-              placeholder="Enter output text..."
-              style={{ width: '100%' }} // Ensure full width
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isAdding}
-            className={`${
-              isAdding ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-700'
-            } text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
-          >
-            {isAdding ? 'Adding...' : 'Add Example'}
-          </button>
-        </form>
-      </div>
-
-      {/* List of Examples */}
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Examples</h2>
-        {examples.length === 0 ? (
-          <p className="text-gray-700">No examples found.</p>
-        ) : (
-          <>
+        {/* Add New Example Form */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">Add New Example</h2>
+          <form onSubmit={handleAddExample} className="bg-white rounded-lg shadow-md p-6">
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Input:
+              </label>
+              <textarea
+                value={newExample.input}
+                onChange={(e) => setNewExample({ ...newExample, input: e.target.value })}
+                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={2}
+                required
+                placeholder="Enter input text..."
+                style={{ width: '100%' }} // Ensure full width
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Output:
+              </label>
+              <textarea
+                value={newExample.output}
+                onChange={(e) => setNewExample({ ...newExample, output: e.target.value })}
+                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={2}
+                required
+                placeholder="Enter output text..."
+                style={{ width: '100%' }} // Ensure full width
+              />
+            </div>
             <button
-              onClick={handleDeleteSelected}
-              className="mb-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-              disabled={selectedExamples.size === 0}
+              type="submit"
+              disabled={isAdding}
+              className={`${
+                isAdding ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-700'
+              } text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
             >
-              Delete Selected
+              {isAdding ? 'Adding...' : 'Add Example'}
             </button>
-            <ul>
-              {examples.map((example) => (
-                <motion.li
-                  key={example.id}
-                  className="mb-4 p-4 bg-white rounded shadow flex flex-col md:flex-row justify-between items-start"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                <input
-                  type="checkbox"
-                  checked={selectedExamples.has(example.id)}
-                  onChange={() => handleSelectExample(example.id)}
-                  className="mr-2"
-                />
-                    <div className="flex-1">
-                      <div className="mb-2 relative">
-                        <label className="block text-sm font-semibold text-gray-700">Input:</label>
-                        <textarea
-                          value={example.input}
-                          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                            handleFieldChange(example.id, 'input', e.target.value)
-                          }
-                          onBlur={() => handleBlur(example.id)}
-                          className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
-                            ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
-                            ${example.isSaving ? savingStyles : ''}`}
-                          rows={2}
-                          required
-                          style={{ width: '100%' }} // Ensure full width
-                        ></textarea>
-                        {example.isSaving && (
-                          <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Saving...
-                          </span>
-                        )}
-                        {example.savedRecently && !example.isSaving && (
-                          <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
-                            <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Saved!
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative">
-                        <label className="block text-sm font-semibold text-gray-700">Output:</label>
-                        <textarea
-                          value={example.output}
-                          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                            handleFieldChange(example.id, 'output', e.target.value)
-                          }
-                          onBlur={() => handleBlur(example.id)}
-                          className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
-                            ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
-                            ${example.isSaving ? savingStyles : ''}`}
-                          rows={2}
-                          required
-                          style={{ width: '100%' }} // Ensure full width
-                        ></textarea>
-                        {example.isSaving && (
-                          <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Saving...
-                          </span>
-                        )}
-                        {example.savedRecently && !example.isSaving && (
-                          <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
-                            <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Saved!
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  <div className="mt-4 md:mt-0 md:ml-4 flex flex-col">
-                    <button
-                      onClick={() => handleDeleteExample(example.id)}
-                      className="mb-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </motion.li>
-              ))}
-            </ul>
-          </>
+          </form>
+        </div>
+
+        {/* List of Examples */}
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Examples</h2>
+          {examples.length === 0 ? (
+            <p className="text-gray-700">No examples found.</p>
+          ) : (
+            <>
+              <button
+                onClick={handleDeleteSelected}
+                className="mb-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                disabled={selectedExamples.size === 0}
+              >
+                Delete Selected
+              </button>
+              <button
+                onClick={handleRegenerateSelected}
+                className="mb-4 ml-2 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+                disabled={selectedExamples.size === 0}
+              >
+                Regenerate Selected
+              </button>
+              <ul>
+                {examples.map((example) => (
+                  <motion.li
+                    key={example.id}
+                    className="mb-4 p-4 bg-white rounded shadow flex flex-col md:flex-row justify-between items-start"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {notification?.id === example.id ? (
+                      <p className="text-green-500">{notification.message}</p>
+                    ) : (
+                      <>
+                        <input
+                          type="checkbox"
+                          checked={selectedExamples.has(example.id)}
+                          onChange={() => handleSelectExample(example.id)}
+                          className="mr-2"
+                        />
+                        <div className="flex-1">
+                          <div className="mb-2 relative">
+                            <label className="block text-sm font-semibold text-gray-700">Input:</label>
+                            <textarea
+                              value={example.input}
+                              onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                                handleFieldChange(example.id, 'input', e.target.value)
+                              }
+                              onBlur={() => handleBlur(example.id)}
+                              className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
+                                ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
+                                ${example.isSaving ? savingStyles : ''}`}
+                              rows={2}
+                              required
+                              style={{ width: '100%' }} // Ensure full width
+                            ></textarea>
+                            {example.isSaving && (
+                              <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Saving...
+                              </span>
+                            )}
+                            {example.savedRecently && !example.isSaving && (
+                              <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
+                                <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Saved!
+                              </span>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <label className="block text-sm font-semibold text-gray-700">Output:</label>
+                            <textarea
+                              value={example.output}
+                              onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                                handleFieldChange(example.id, 'output', e.target.value)
+                              }
+                              onBlur={() => handleBlur(example.id)}
+                              className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
+                                ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
+                                ${example.isSaving ? savingStyles : ''}`}
+                              rows={2}
+                              required
+                              style={{ width: '100%' }} // Ensure full width
+                            ></textarea>
+                            {example.isSaving && (
+                              <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Saving...
+                              </span>
+                            )}
+                            {example.savedRecently && !example.isSaving && (
+                              <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
+                                <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Saved!
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-4 md:mt-0 md:ml-4 flex flex-col">
+                          <button
+                            onClick={() => handleDeleteExample(example.id)}
+                            className="mb-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => handleRegenerateExample(example.id)}
+                            className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded"
+                          >
+                            Regenerate
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </motion.li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+        {notification && (
+          <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded shadow-lg">
+            {notification.message}
+          </div>
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import AdminNav from '../components/AdminNav';
 
 interface SystemPrompt {
   id: number;
@@ -11,7 +12,7 @@ interface SystemPrompt {
   createdAt: string;
 }
 
-export default function Admin() {
+export default function SystemPrompt() {
   const { data: session, status } = useSession();
   const router = useRouter();
   
@@ -87,54 +88,51 @@ export default function Admin() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen p-8 bg-gray-100">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Panel - System Prompt</h1>
-        <button
-          onClick={() => signOut({ callbackUrl: '/admin/signin' })}
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Sign Out
-        </button>
-      </div>
+    <div className="min-h-screen bg-gray-100">
+      <AdminNav />
+      <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Admin Panel - System Prompt</h1>
+        </div>
 
-      {/* Display Error Message */}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+        {/* Display Error Message */}
+        {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      {/* Edit System Prompt */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Edit System Prompt</h2>
-        {latestPrompt ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <form onSubmit={handleUpdatePrompt}>
-              <textarea
-                value={editedContent}
-                onChange={(e) => setEditedContent(e.target.value)}
-                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={36}
-                required
-              ></textarea>
-              <div className="flex justify-between items-center mt-4">
-                <button
-                  type="submit"
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                  disabled={loading}
-                >
-                  {loading ? 'Updating...' : 'Update Prompt'}
-                </button>
-                <p className="text-sm text-gray-500">
-                  Last updated: {new Date(latestPrompt.createdAt).toLocaleString()}
-                </p>
-              </div>
-            </form>
-          </motion.div>
-        ) : (
-          <p>Loading system prompt...</p>
-        )}
+        {/* Edit System Prompt */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">Edit System Prompt</h2>
+          {latestPrompt ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <form onSubmit={handleUpdatePrompt}>
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={36}
+                  required
+                ></textarea>
+                <div className="flex justify-between items-center mt-4">
+                  <button
+                    type="submit"
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                    disabled={loading}
+                  >
+                    {loading ? 'Updating...' : 'Update Prompt'}
+                  </button>
+                  <p className="text-sm text-gray-500">
+                    Last updated: {new Date(latestPrompt.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </form>
+            </motion.div>
+          ) : (
+            <p>Loading system prompt...</p>
+          )}
+        </div>
       </div>
     </div>
   );
