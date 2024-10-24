@@ -38,6 +38,7 @@ export default function AdminExamples() {
   const [error, setError] = useState<string | null>(null);
   const [newExample, setNewExample] = useState({ input: '', output: '' });
   const [isAdding, setIsAdding] = useState(false);
+  const [selectedExamples, setSelectedExamples] = useState<Set<number>>(new Set());
 
   // Fetch examples on component mount
   useEffect(() => {
@@ -215,6 +216,36 @@ export default function AdminExamples() {
     );
   };
 
+  const handleSelectExample = (id: number) => {
+    setSelectedExamples((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedExamples.size === 0) return;
+    if (confirm('Are you sure you want to delete the selected examples?')) {
+      try {
+        for (const id of Array.from(selectedExamples)) {
+          await fetch(`/api/examples/${id}`, {
+            method: 'DELETE',
+          });
+        }
+        setExamples(examples.filter((ex) => !selectedExamples.has(ex.id)));
+        setSelectedExamples(new Set());
+      } catch (err) {
+        console.error('Error deleting selected examples:', err);
+        setError('An unexpected error occurred.');
+      }
+    }
+  };
+
   if (status === 'loading') {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
@@ -253,6 +284,7 @@ export default function AdminExamples() {
               rows={2}
               required
               placeholder="Enter input text..."
+              style={{ width: '100%' }} // Ensure full width
             />
           </div>
           <div className="mb-4">
@@ -266,6 +298,7 @@ export default function AdminExamples() {
               rows={2}
               required
               placeholder="Enter output text..."
+              style={{ width: '100%' }} // Ensure full width
             />
           </div>
           <button
@@ -286,98 +319,109 @@ export default function AdminExamples() {
         {examples.length === 0 ? (
           <p className="text-gray-700">No examples found.</p>
         ) : (
-          <ul>
-            {examples.map((example) => (
-              <motion.li
-                key={example.id}
-                className="mb-4 p-4 bg-white rounded shadow flex flex-col md:flex-row justify-between items-start"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex-1">
-                  <div className="mb-2 relative">
-                    <label className="block text-sm font-semibold text-gray-700">Input:</label>
-                    <textarea
-                      value={example.input}
-                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                        handleFieldChange(example.id, 'input', e.target.value)
-                      }
-                      onBlur={() => handleBlur(example.id)}
-                      className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
-                        ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
-                        ${example.isSaving ? savingStyles : ''}`}
-                      rows={2}
-                      required
-                    ></textarea>
-                    {example.isSaving && (
-                      <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Saving...
-                      </span>
-                    )}
-                    {example.savedRecently && !example.isSaving && (
-                      <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
-                        <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        Saved!
-                      </span>
-                    )}
+          <>
+            <button
+              onClick={handleDeleteSelected}
+              className="mb-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              disabled={selectedExamples.size === 0}
+            >
+              Delete Selected
+            </button>
+            <ul>
+              {examples.map((example) => (
+                <motion.li
+                  key={example.id}
+                  className="mb-4 p-4 bg-white rounded shadow flex flex-col md:flex-row justify-between items-start"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                <input
+                  type="checkbox"
+                  checked={selectedExamples.has(example.id)}
+                  onChange={() => handleSelectExample(example.id)}
+                  className="mr-2"
+                />
+                    <div className="flex-1">
+                      <div className="mb-2 relative">
+                        <label className="block text-sm font-semibold text-gray-700">Input:</label>
+                        <textarea
+                          value={example.input}
+                          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                            handleFieldChange(example.id, 'input', e.target.value)
+                          }
+                          onBlur={() => handleBlur(example.id)}
+                          className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
+                            ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
+                            ${example.isSaving ? savingStyles : ''}`}
+                          rows={2}
+                          required
+                          style={{ width: '100%' }} // Ensure full width
+                        ></textarea>
+                        {example.isSaving && (
+                          <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Saving...
+                          </span>
+                        )}
+                        {example.savedRecently && !example.isSaving && (
+                          <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
+                            <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Saved!
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <label className="block text-sm font-semibold text-gray-700">Output:</label>
+                        <textarea
+                          value={example.output}
+                          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                            handleFieldChange(example.id, 'output', e.target.value)
+                          }
+                          onBlur={() => handleBlur(example.id)}
+                          className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
+                            ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
+                            ${example.isSaving ? savingStyles : ''}`}
+                          rows={2}
+                          required
+                          style={{ width: '100%' }} // Ensure full width
+                        ></textarea>
+                        {example.isSaving && (
+                          <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Saving...
+                          </span>
+                        )}
+                        {example.savedRecently && !example.isSaving && (
+                          <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
+                            <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Saved!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  <div className="mt-4 md:mt-0 md:ml-4 flex flex-col">
+                    <button
+                      onClick={() => handleDeleteExample(example.id)}
+                      className="mb-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
+                    >
+                      Delete
+                    </button>
                   </div>
-                  <div className="relative">
-                    <label className="block text-sm font-semibold text-gray-700">Output:</label>
-                    <textarea
-                      value={example.output}
-                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                        handleFieldChange(example.id, 'output', e.target.value)
-                      }
-                      onBlur={() => handleBlur(example.id)}
-                      className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300
-                        ${example.savedRecently ? 'bg-green-50 border-green-200' : ''}
-                        ${example.isSaving ? savingStyles : ''}`}
-                      rows={2}
-                      required
-                    ></textarea>
-                    {example.isSaving && (
-                      <span className="absolute right-2 top-8 text-blue-500 text-sm flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Saving...
-                      </span>
-                    )}
-                    {example.savedRecently && !example.isSaving && (
-                      <span className="absolute right-2 top-8 text-green-500 text-sm flex items-center">
-                        <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        Saved!
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2 text-sm text-gray-500">
-                    Created At: {new Date(example.createdAt).toLocaleString()}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Updated At: {new Date(example.updatedAt).toLocaleString()}
-                  </div>
-                </div>
-                <div className="mt-4 md:mt-0 md:ml-4 flex flex-col">
-                  <button
-                    onClick={() => handleDeleteExample(example.id)}
-                    className="mb-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </motion.li>
-            ))}
-          </ul>
+                </motion.li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
     </div>

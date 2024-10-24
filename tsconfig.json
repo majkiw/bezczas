@@ -30,6 +30,9 @@
       ],
       "@api/*": [
         "app/api/*"
+      ],
+      "@utils/*": [
+        "app/utils/*"
       ]
     },
     "incremental": true,

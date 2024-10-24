@@ -79,6 +79,31 @@ export default function AdminDashboard() {
             </p>
           </div>
         </Link>
+
+        {/* Proposed Examples Card */}
+        <Link href="/admin/proposed-examples" className="block">
+          <div className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
+            <div className="flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
+              <svg 
+                className="w-8 h-8 text-purple-600" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M13 16h-1v-4h-1m1-4h.01M12 20h.01M12 4h.01M4 12h.01M20 12h.01M4.93 4.93h.01M19.07 19.07h.01M4.93 19.07h.01M19.07 4.93h.01" 
+                />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Proposed Examples</h2>
+            <p className="text-gray-600">
+              Generate and review proposed examples based on input phrases.
+            </p>
+          </div>
+        </Link>
       </div>
     </div>
   );

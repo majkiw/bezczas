@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { generateCompletions, prepareSystemPrompt } from "@utils/openai";
 
 export async function POST(request: Request) {
   try {
@@ -14,50 +9,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Input is required." }, { status: 400 });
     }
 
-    // Fetch the latest system prompt from the database
-    const latestPrompt = await prisma.systemPrompt.findFirst({
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const systemPrompt = await prepareSystemPrompt();
+    const completions = await generateCompletions(input, systemPrompt, 1);
 
-    if (!latestPrompt) {
-      return NextResponse.json(
-        { error: "System prompt not configured." },
-        { status: 500 }
-      );
-    }
+    const processedText = completions[0];
 
-    // Fetch all examples from the database
-    const examples = await prisma.example.findMany({
-      orderBy: { createdAt: "asc" },
-    });
-
-    // Append examples to the system prompt
-    if (examples.length > 0) {
-      latestPrompt.content += "\n\n## Przykłady:\n";
-      examples.forEach((ex) => {
-        latestPrompt.content += `### Wypowiedź użytkownika:\n${ex.input}\n### Język Bezczasowy:\n${ex.output}\n\n`;
-      });
-    }
-
-    const systemPrompt = latestPrompt.content;
-    const prompt = `${input}`;
-
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
-      ],
-      max_tokens: 1000,
-      temperature: 0.8,
-    });
-
-    const processedText = completion.choices[0].message?.content!!.trim();
-
-    console.log(prompt, processedText);
+    console.log(input, processedText);
 
     return NextResponse.json({ processedText });
   } catch (error: any) {

@@ -21,21 +21,22 @@ export async function POST(request: Request) {
     const { input, output } = await request.json();
 
     if (!input || !output) {
-      return NextResponse.json(
-        { error: 'Both input and output are required.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Input and output are required." }, { status: 400 });
     }
 
-    const newExample = await prisma.example.create({
-      data: { input, output },
+    // Save the example to the database
+    const example = await prisma.example.create({
+      data: {
+        input,
+        output,
+      },
     });
 
-    return NextResponse.json({ example: newExample });
+    return NextResponse.json({ example });
   } catch (error: any) {
-    console.error('Error creating example:', error);
+    console.error("Error saving example:", error);
     return NextResponse.json(
-      { error: 'Failed to create example.' },
+      { error: "An error occurred while saving the example." },
       { status: 500 }
     );
   }
