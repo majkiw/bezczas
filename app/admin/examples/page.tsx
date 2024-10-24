@@ -14,6 +14,9 @@ interface Example {
   updatedAt: string;
   isSaving?: boolean;
   savedRecently?: boolean;
+  originalInput?: string;  // Track original value
+  originalOutput?: string; // Track original value
+  isDirty?: boolean;      // Track if changes are unsaved
 }
 
 // Add this CSS class to your globals.css file or use inline styles
@@ -54,7 +57,12 @@ export default function AdminExamples() {
       const response = await fetch('/api/examples');
       const data = await response.json();
       if (response.ok) {
-        setExamples(data.examples);
+        setExamples(data.examples.map((ex: Example) => ({
+          ...ex,
+          originalInput: ex.input,
+          originalOutput: ex.output,
+          isDirty: false
+        })));
       } else {
         setError(data.error || 'Failed to fetch examples.');
       }
@@ -82,20 +90,8 @@ export default function AdminExamples() {
         const data = await response.json();
 
         if (response.ok) {
-          setExamples((prev) =>
-            prev.map((ex) =>
-              ex.id === id
-                ? {
-                    ...ex,
-                    ...data.example,
-                    isSaving: false,
-                    savedRecently: true,
-                  }
-                : ex
-            )
-          );
-
-          // Remove the "savedRecently" flag after 5 seconds
+          handleSaveSuccess(id, data.example);
+          
           setTimeout(() => {
             setExamples((prev) =>
               prev.map((ex) =>
@@ -114,11 +110,11 @@ export default function AdminExamples() {
     []
   );
 
-  // Handle immediate save on blur
+  // Update handleBlur to check for changes before saving
   const handleBlur = async (id: number) => {
-    debouncedSave.cancel(); // Cancel any pending debounced saves
     const example = examples.find(ex => ex.id === id);
-    if (example) {
+    if (example && example.isDirty) {
+      debouncedSave.cancel(); // Cancel any pending debounced saves
       await debouncedSave(id, { 
         input: example.input,
         output: example.output 
@@ -127,20 +123,28 @@ export default function AdminExamples() {
   };
 
   const handleFieldChange = (id: number, field: 'input' | 'output', value: string) => {
-    // Update the UI immediately
     setExamples((prev) =>
-      prev.map((ex) => (ex.id === id ? { ...ex, [field]: value } : ex))
+      prev.map((ex) => {
+        if (ex.id !== id) return ex;
+        
+        const originalValue = field === 'input' ? ex.originalInput : ex.originalOutput;
+        const hasChanged = value !== originalValue;
+        
+        return {
+          ...ex,
+          [field]: value,
+          isDirty: hasChanged || (field === 'input' ? ex.output !== ex.originalOutput : ex.input !== ex.originalInput)
+        };
+      })
     );
-    
-    // Get both current values for the example
+
+    // Only trigger save if the example is dirty
     const example = examples.find(ex => ex.id === id);
-    if (example) {
-      const updates = {
+    if (example?.isDirty) {
+      debouncedSave(id, {
         input: field === 'input' ? value : example.input,
         output: field === 'output' ? value : example.output
-      };
-      // Schedule the save with both values
-      debouncedSave(id, updates);
+      });
     }
   };
 
@@ -191,6 +195,24 @@ export default function AdminExamples() {
     } finally {
       setIsAdding(false);
     }
+  };
+
+  const handleSaveSuccess = (id: number, updatedExample: any) => {
+    setExamples((prev) =>
+      prev.map((ex) =>
+        ex.id === id
+          ? {
+              ...ex,
+              ...updatedExample,
+              originalInput: updatedExample.input,
+              originalOutput: updatedExample.output,
+              isSaving: false,
+              savedRecently: true,
+              isDirty: false
+            }
+          : ex
+      )
+    );
   };
 
   if (status === 'loading') {
