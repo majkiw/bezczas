@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { motion, AnimatePresence, MotionStyle } from 'framer-motion';
+import { motion, AnimatePresence, MotionStyle, AnimationControls, TargetAndTransition, VariantLabels } from 'framer-motion';
 
 // Define different animation styles
 const animationStyles = [
@@ -424,7 +424,7 @@ const animationStyles = [
             repeatType: "reverse",
             ease: "easeInOut"
           }
-        },
+        } as AnimationControls | TargetAndTransition | VariantLabels | boolean,
         style: {
           position: 'absolute',
           top: '50%',
@@ -492,7 +492,7 @@ const animationStyles = [
             repeatType: "reverse",
             ease: "easeInOut"
           }
-        },
+        } as AnimationControls | TargetAndTransition | VariantLabels | boolean,
         style: {
           position: 'absolute',
           top: '50%',
@@ -562,7 +562,7 @@ const animationStyles = [
             ease: "easeInOut",
             delay: wordIndex * 0.1
           }
-        },
+        } as AnimationControls | TargetAndTransition | VariantLabels | boolean,
         style: {
           position: 'absolute',
           top: '50%',
@@ -648,9 +648,9 @@ export default function Home() {
         // Only randomize if controls are not shown
         if (!showControls) {
           const randomStyle = animationStyles[Math.floor(Math.random() * animationStyles.length)];
+          console.log("Animation style:", randomStyle.name);
           setCurrentStyle(randomStyle);
         }
-        console.log("Animation style:", currentStyle.name);
         setSubmittedValue(data.processedText);
       } else {
         setError(data.error || 'Something went wrong.');
