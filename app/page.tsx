@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence, MotionStyle } from 'framer-motion';
 
@@ -155,8 +155,455 @@ const animationStyles = [
         delay: Math.random() * 2
       }
     }
+  },
+
+  // 5. Synesthetic Pulse - Fixed positioning
+  {
+    name: 'synesthetic',
+    container: { className: "relative h-full" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const radius = 150;
+      const angle = (wordIndex * 2 * Math.PI) / words.length;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      
+      return {
+        initial: { 
+          opacity: 0,
+          x: 0,
+          y: 0,
+          scale: 0
+        },
+        animate: { 
+          opacity: 1,
+          x,
+          y,
+          scale: 1,
+          transition: { 
+            delay: wordIndex * 0.2,
+            duration: 1,
+            type: "spring"
+          }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          filter: 'url(#glow)'
+        }
+      };
+    },
+    word: {
+      animate: {
+        scale: [1, 1.2, 1],
+        textShadow: [
+          "0 0 8px rgba(124, 58, 237, 0.8)",
+          "0 0 16px rgba(139, 92, 246, 0.8)",
+          "0 0 8px rgba(124, 58, 237, 0.8)"
+        ],
+        color: [
+          "#818cf8",
+          "#c084fc",
+          "#818cf8"
+        ]
+      },
+      transition: { 
+        duration: 3,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }
+    }
+  },
+
+  // 6. Musical Flow - Updated for right-to-left movement
+  {
+    name: 'musicalFlow',
+    container: { className: "relative h-full overflow-hidden" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const baseY = 0;
+      const amplitude = 40;  // Reduced amplitude for better readability
+      const frequency = 0.2; // Reduced frequency for smoother waves
+      const width = typeof window !== 'undefined' ? window.innerWidth : 1000;
+      const spacing = width / (words.length + 1);
+      const startX = width + (spacing * wordIndex);  // Start from right side
+      
+      return {
+        initial: { 
+          opacity: 0,
+          x: startX,
+          y: baseY
+        },
+        animate: { 
+          opacity: 1,
+          x: [startX, -spacing],  // Move from right to left
+          y: [
+            baseY,
+            baseY + Math.sin(wordIndex * frequency) * amplitude,
+            baseY - Math.sin(wordIndex * frequency) * amplitude,
+            baseY
+          ],
+          transition: {
+            duration: 15,  // Slowed down the animation
+            repeat: Infinity,
+            ease: "linear",
+            times: [0, 0.33, 0.66, 1]
+          }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          whiteSpace: 'nowrap',
+          fontSize: '2rem',  // Increased font size
+          fontWeight: 'bold'
+        }
+      };
+    },
+    word: {
+      animate: {
+        rotate: [-3, 3],  // Reduced rotation for better readability
+        scale: [0.98, 1.02],  // Subtler scale changes
+        color: [
+          "#4f46e5",
+          "#7c3aed",
+          "#4f46e5"
+        ]
+      },
+      transition: { 
+        duration: 3,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }
+    }
+  },
+
+  // 7. Quantum Entanglement - Improved
+  {
+    name: 'quantum',
+    container: { className: "relative h-full" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const isEven = wordIndex % 2 === 0;
+      const orbitRadius = 180;
+      
+      return {
+        initial: { 
+          opacity: 0,
+          scale: 0.5,
+          x: 0,
+          y: 0
+        },
+        animate: { 
+          opacity: [0.4, 1, 0.4],
+          scale: 1,
+          x: [
+            orbitRadius * Math.cos(wordIndex),
+            orbitRadius * Math.cos(wordIndex + Math.PI),
+            orbitRadius * Math.cos(wordIndex + 2 * Math.PI)
+          ],
+          y: [
+            orbitRadius * Math.sin(wordIndex),
+            orbitRadius * Math.sin(wordIndex + Math.PI),
+            orbitRadius * Math.sin(wordIndex + 2 * Math.PI)
+          ],
+          transition: {
+            duration: isEven ? 8 : 12,
+            repeat: Infinity,
+            ease: "linear",
+            delay: wordIndex * 0.2
+          }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: words.length - wordIndex,
+          filter: 'url(#glow)'
+        }
+      };
+    },
+    word: {
+      animate: {
+        scale: [1, 1.1, 1],
+        rotate: [0, 360],
+        textShadow: [
+          "0 0 8px rgba(56, 189, 248, 0.6)",
+          "0 0 16px rgba(14, 165, 233, 0.8)",
+          "0 0 8px rgba(56, 189, 248, 0.6)"
+        ],
+        color: [
+          "#38bdf8",
+          "#0ea5e9",
+          "#38bdf8"
+        ]
+      },
+      transition: { 
+        duration: 6,
+        repeat: Infinity,
+        repeatType: "reverse"
+      }
+    }
+  },
+
+  // 8. Kaleidoscope
+  {
+    name: 'kaleidoscope',
+    container: { className: "relative h-full" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const segments = 6;
+      const angleStep = (2 * Math.PI) / segments;
+      const radius = 150;
+      const baseAngle = (wordIndex * 2 * Math.PI) / words.length;
+      
+      return {
+        initial: { opacity: 0, scale: 0 },
+        animate: { 
+          opacity: 1,
+          scale: 1,
+          transition: { duration: 1, delay: wordIndex * 0.1 }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          filter: 'url(#glow)',
+        }
+      };
+    },
+    word: {
+      animate: {
+        x: [0, 100, 0],
+        y: [0, 100, 0],
+        rotate: [0, 360],
+        scale: [1, 1.2, 1],
+        color: [
+          "#f472b6",
+          "#818cf8",
+          "#f472b6"
+        ]
+      },
+      transition: { 
+        duration: 8,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "linear"
+      }
+    }
+  },
+
+  // 9. Nebula
+  {
+    name: 'nebula',
+    container: { className: "relative h-full" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const radius = 200;
+      const angle = (wordIndex * 2 * Math.PI) / words.length;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      
+      return {
+        initial: { 
+          opacity: 0,
+          x: 0,
+          y: 0,
+          scale: 0,
+          filter: 'blur(10px)'
+        },
+        animate: { 
+          opacity: [0.4, 1, 0.4],
+          x: [x, x * 1.2, x],
+          y: [y, y * 1.2, y],
+          scale: 1,
+          filter: ['blur(3px)', 'blur(0px)', 'blur(3px)'],
+          transition: { 
+            duration: 10,
+            repeat: Infinity,
+            repeatType: "reverse",
+            ease: "easeInOut"
+          }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }
+      };
+    },
+    word: {
+      animate: {
+        textShadow: [
+          "0 0 20px rgba(167, 139, 250, 0.7)",
+          "0 0 35px rgba(139, 92, 246, 0.9)",
+          "0 0 20px rgba(167, 139, 250, 0.7)"
+        ],
+        color: [
+          "#a78bfa",
+          "#8b5cf6",
+          "#a78bfa"
+        ]
+      },
+      transition: { 
+        duration: 5,
+        repeat: Infinity,
+        repeatType: "reverse"
+      }
+    }
+  },
+
+  // 10. Constellation
+  {
+    name: 'constellation',
+    container: { className: "relative h-full" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const gridSize = Math.ceil(Math.sqrt(words.length));
+      const cellSize = 100;
+      const startX = -(gridSize * cellSize) / 2;
+      const startY = -(gridSize * cellSize) / 2;
+      const row = Math.floor(wordIndex / gridSize);
+      const col = wordIndex % gridSize;
+      
+      return {
+        initial: { 
+          opacity: 0,
+          x: startX + (col * cellSize),
+          y: startY + (row * cellSize),
+          scale: 0
+        },
+        animate: { 
+          opacity: [0.5, 1, 0.5],
+          scale: 1,
+          x: [
+            startX + (col * cellSize),
+            startX + (col * cellSize) + (Math.random() * 20 - 10),
+            startX + (col * cellSize)
+          ],
+          y: [
+            startY + (row * cellSize),
+            startY + (row * cellSize) + (Math.random() * 20 - 10),
+            startY + (row * cellSize)
+          ],
+          transition: {
+            duration: 4,
+            repeat: Infinity,
+            repeatType: "reverse",
+            ease: "easeInOut"
+          }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          filter: 'url(#glow)'
+        }
+      };
+    },
+    word: {
+      animate: {
+        scale: [1, 1.1, 1],
+        textShadow: [
+          "0 0 5px rgba(147, 197, 253, 0.6)",
+          "0 0 15px rgba(59, 130, 246, 0.8)",
+          "0 0 5px rgba(147, 197, 253, 0.6)"
+        ],
+        color: [
+          "#93c5fd",
+          "#3b82f6",
+          "#93c5fd"
+        ]
+      },
+      transition: { 
+        duration: 3,
+        repeat: Infinity,
+        repeatType: "reverse"
+      }
+    }
+  },
+
+  // 11. Sinusoidal Wave
+  {
+    name: 'sinusoidal',
+    container: { className: "relative h-full" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const width = typeof window !== 'undefined' ? window.innerWidth : 1000;
+      const height = typeof window !== 'undefined' ? window.innerHeight : 600;
+      
+      // Calculate base position along sine wave
+      const xSpacing = width * 0.8 / (words.length - 1); // Use 80% of width
+      const x = (xSpacing * wordIndex) - (width * 0.4); // Center horizontally
+      const frequency = 0.005; // Controls how many waves appear
+      const amplitude = height * 0.15; // Controls wave height
+      const y = Math.sin(x * frequency) * amplitude;
+      
+      return {
+        initial: { 
+          opacity: 0,
+          x: x,
+          y: 0,
+          scale: 0
+        },
+        animate: { 
+          opacity: [0.7, 1, 0.7],
+          scale: 1,
+          x: x,
+          y: [
+            y,
+            y + (Math.sin(wordIndex * 0.5) * 20), // Small individual vertical movement
+            y
+          ],
+          transition: {
+            duration: 4,
+            repeat: Infinity,
+            repeatType: "reverse",
+            ease: "easeInOut",
+            delay: wordIndex * 0.1
+          }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          fontSize: `${Math.max(1.2, 2 - (words.length * 0.05))}rem`, // Adjust size based on word count
+          filter: 'url(#glow)',
+          zIndex: Math.round(Math.abs(y)) // Words closer to center appear on top
+        }
+      };
+    },
+    word: {
+      animate: {
+        rotate: [-2, 2], // Subtle rotation
+        scale: [0.95, 1.05],
+        color: [
+          "#6366f1", // Indigo
+          "#8b5cf6", // Purple
+          "#6366f1"  // Back to indigo
+        ],
+        textShadow: [
+          "0 0 8px rgba(99, 102, 241, 0.5)",
+          "0 0 12px rgba(139, 92, 246, 0.6)",
+          "0 0 8px rgba(99, 102, 241, 0.5)"
+        ]
+      },
+      transition: { 
+        duration: 3,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }
+    }
   }
 ];
+
+// Near the top of the file, after imports
+const ANIMATION_STYLES_PARAM = 'show-controls';
+
+// Add these new types and state in the Home component
+type AnimationStyleName = typeof animationStyles[number]['name'];
 
 export default function Home() {
   const [inputValue, setInputValue] = useState('Dokąd jutro idziesz?');
@@ -164,6 +611,21 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStyle, setCurrentStyle] = useState(animationStyles[0]);
+  const [showControls, setShowControls] = useState(false);
+
+  // Add this useEffect to check URL params
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setShowControls(searchParams.has(ANIMATION_STYLES_PARAM));
+  }, []);
+
+  // Add this handler
+  const handleStyleChange = (styleName: AnimationStyleName) => {
+    const style = animationStyles.find(s => s.name === styleName);
+    if (style) {
+      setCurrentStyle(style);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -183,9 +645,12 @@ export default function Home() {
       const data = await response.json();
 
       if (response.ok) {
-        // Choose a random animation style
-        const randomStyle = animationStyles[Math.floor(Math.random() * animationStyles.length)];
-        setCurrentStyle(randomStyle);
+        // Only randomize if controls are not shown
+        if (!showControls) {
+          const randomStyle = animationStyles[Math.floor(Math.random() * animationStyles.length)];
+          setCurrentStyle(randomStyle);
+        }
+        console.log("Animation style:", currentStyle.name);
         setSubmittedValue(data.processedText);
       } else {
         setError(data.error || 'Something went wrong.');
@@ -201,10 +666,38 @@ export default function Home() {
 
   return (
     <div className="min-h-screen py-2 bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <svg className="hidden">
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
       <Head>
         <title>Bezczas</title>
       </Head>
       <div className="fixed inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
+      
+      {showControls && (
+        <div className="fixed top-4 right-4 z-50">
+          <select 
+            className="px-4 py-2 rounded-lg bg-white/90 backdrop-blur-sm border border-purple-200 
+                       shadow-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            value={currentStyle.name}
+            onChange={(e) => handleStyleChange(e.target.value as AnimationStyleName)}
+          >
+            {animationStyles.map(style => (
+              <option key={style.name} value={style.name}>
+                {style.name.charAt(0).toUpperCase() + style.name.slice(1)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       
       {/* Split the screen into two sections */}
       <div className="min-h-screen flex flex-col">
