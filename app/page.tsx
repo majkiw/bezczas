@@ -24,7 +24,7 @@ const animationStyles: AnimationStyle[] = [
   {
     name: 'spiral',
     container: {},
-    wordContainer: (wordIndex: number, words: string[], word: string) => {
+    wordContainer: (wordIndex: number, words: string[]) => {
       // Increase spacing between spiral loops
       const angle = (wordIndex * 3 * Math.PI) / words.length; // Increased from 2 to 3
       const spiralRadius = Math.min(window.innerWidth, window.innerHeight) * 0.35; // Increased from 0.25 to 0.35
