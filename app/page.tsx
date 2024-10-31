@@ -4,8 +4,22 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence, MotionStyle, AnimationControls, TargetAndTransition, VariantLabels } from 'framer-motion';
 
+// Add these types at the top of the file, after imports
+type WordAnimation = {
+  animate: any;
+  transition: any;
+};
+
+type AnimationStyle = {
+  name: string;
+  container: { className?: string };
+  wordContainer: (wordIndex: number, words: string[], word?: string) => any;
+  word: WordAnimation | ((wordIndex: number) => WordAnimation);
+  transformWord?: (word: string) => string;
+};
+
 // Define different animation styles
-const animationStyles = [
+const animationStyles: AnimationStyle[] = [
   // 1. Spiral - with increased spacing
   {
     name: 'spiral',
@@ -596,6 +610,372 @@ const animationStyles = [
         ease: "easeInOut"
       }
     }
+  },
+
+  // // 12. Symbolic - Replaces words with symbols
+  // {
+  //   name: 'symbolic',
+  //   container: { className: "relative h-full" },
+  //   wordContainer: (wordIndex: number, words: string[]) => {
+  //     const radius = 180;
+  //     const angle = (wordIndex * 2 * Math.PI) / words.length;
+  //     const x = Math.cos(angle) * radius;
+  //     const y = Math.sin(angle) * radius;
+      
+  //     return {
+  //       initial: { 
+  //         opacity: 0,
+  //         scale: 0,
+  //         x: 0,
+  //         y: 0,
+  //         rotate: -30
+  //       },
+  //       animate: { 
+  //         opacity: 1,
+  //         scale: 1,
+  //         x,
+  //         y,
+  //         rotate: 0,
+  //         transition: {
+  //           type: "spring",
+  //           stiffness: 100,
+  //           damping: 10,
+  //           delay: wordIndex * 0.1
+  //         }
+  //       },
+  //       style: {
+  //         position: 'absolute',
+  //         top: '50%',
+  //         left: '50%',
+  //         transform: 'translate(-50%, -50%)',
+  //         fontSize: '2.5rem'
+  //       }
+  //     };
+  //   },
+  //   word: {
+  //     animate: {
+  //       scale: [1, 1.2, 1],
+  //       rotate: [-5, 5, -5],
+  //       color: [
+  //         "#4f46e5",
+  //         "#7c3aed",
+  //         "#4f46e5"
+  //       ]
+  //     },
+  //     transition: { 
+  //       duration: 4,
+  //       repeat: Infinity,
+  //       repeatType: "reverse"
+  //     }
+  //   },
+  //   // Add a transform function to convert words to symbols
+  //   transformWord: (word: string) => {
+  //     const symbolMap: { [key: string]: string } = {
+  //       'samotność': '1',
+  //       'samotny': '1',
+  //       'sam': '1',
+  //       'radość': '😊',
+  //       'radosny': '😊',
+  //       'szczęście': '😊',
+  //       'smutek': '😢',
+  //       'smutny': '😢',
+  //       'miłoś': '❤️',
+  //       'kochać': '❤️',
+  //       // Add more mappings as needed
+  //     };
+  //     return symbolMap[word.toLowerCase()] || word;
+  //   }
+  // },
+
+  // 13. Starburst - Words explode from center and stabilize
+  {
+    name: 'starburst',
+    container: { className: "relative h-full" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const angle = (wordIndex * 360) / words.length;
+      const radius = 200;
+      const randomOffset = Math.random() * 30 - 15; // Random offset for more organic feel
+      
+      return {
+        initial: { 
+          opacity: 0,
+          scale: 0,
+          x: 0,
+          y: 0,
+          rotate: 0
+        },
+        animate: { 
+          opacity: 1,
+          scale: 1,
+          x: Math.cos((angle + randomOffset) * Math.PI / 180) * radius,
+          y: Math.sin((angle + randomOffset) * Math.PI / 180) * radius,
+          rotate: angle + randomOffset,
+          transition: {
+            type: "spring",
+            stiffness: 70,
+            damping: 12,
+            delay: wordIndex * 0.1
+          }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          fontSize: '1.8rem',
+          fontWeight: 'bold',
+          filter: 'url(#glow)'
+        }
+      };
+    },
+    word: {
+      animate: {
+        scale: [1, 1.1, 1],
+        textShadow: [
+          "0 0 8px rgba(139, 92, 246, 0.5)",
+          "0 0 16px rgba(124, 58, 237, 0.7)",
+          "0 0 8px rgba(139, 92, 246, 0.5)"
+        ],
+        color: [
+          "#8b5cf6",
+          "#7c3aed",
+          "#8b5cf6"
+        ]
+      },
+      transition: { 
+        duration: 3,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }
+    }
+  },
+
+  // 14. Ocean Wave - Dynamic sea-like motion with stronger accents
+  {
+    name: 'oceanWave',
+    container: { className: "relative h-full overflow-hidden" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      const width = typeof window !== 'undefined' ? window.innerWidth : 1000;
+      const height = typeof window !== 'undefined' ? window.innerHeight : 600;
+      
+      // Calculate base position in a wave pattern
+      const xSpacing = width * 0.8 / (words.length - 1);
+      const x = (xSpacing * wordIndex) - (width * 0.4);
+      
+      // Create multiple wave components for more complex motion
+      const primaryWave = Math.sin(x * 0.005) * (height * 0.15);
+      const secondaryWave = Math.sin(x * 0.015) * (height * 0.05);
+      const baseY = primaryWave + secondaryWave;
+      
+      // Add emphasis to certain words (every 3rd word)
+      const isEmphasized = wordIndex % 3 === 0;
+      
+      return {
+        initial: { 
+          opacity: 0,
+          x: x,
+          y: 0,
+          scale: 0.5,
+          rotate: 0
+        },
+        animate: { 
+          opacity: [0.7, 1, 0.7],
+          scale: isEmphasized ? [1, 1.2, 1] : [1, 1.1, 1],
+          x: x,
+          y: [
+            baseY,
+            baseY + (isEmphasized ? 40 : 20),
+            baseY - (isEmphasized ? 40 : 20),
+            baseY
+          ],
+          rotate: [
+            -5,
+            isEmphasized ? 8 : 5,
+            -isEmphasized ? -8 : -5,
+            -5
+          ],
+          transition: {
+            duration: isEmphasized ? 5 : 4,
+            repeat: Infinity,
+            repeatType: "reverse",
+            ease: "easeInOut",
+            delay: wordIndex * 0.2
+          }
+        } as AnimationControls | TargetAndTransition | VariantLabels | boolean,
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          fontSize: isEmphasized ? '2.5rem' : '2rem',
+          filter: 'url(#glow)',
+          zIndex: isEmphasized ? 2 : 1
+        }
+      };
+    },
+    word: {
+      animate: {
+        color: [
+          "#0ea5e9", // Sky blue
+          "#0284c7", // Darker blue
+          "#38bdf8", // Lighter blue
+          "#0ea5e9"  // Back to sky blue
+        ],
+        textShadow: [
+          "0 0 8px rgba(14, 165, 233, 0.6)",
+          "0 0 15px rgba(56, 189, 248, 0.7)",
+          "0 0 20px rgba(14, 165, 233, 0.8)",
+          "0 0 8px rgba(14, 165, 233, 0.6)"
+        ]
+      },
+      transition: { 
+        duration: 5,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }
+    }
+  },
+
+  // 15. Solar System - Words orbiting around central word
+  {
+    name: 'solarSystem',
+    container: { className: "relative h-full overflow-hidden" },
+    wordContainer: (wordIndex: number, words: string[]) => {
+      // First word will be the sun in the center
+      if (wordIndex === 0) {
+        return {
+          initial: { 
+            opacity: 0,
+            scale: 0
+          },
+          animate: { 
+            opacity: 1,
+            scale: 1,
+            transition: {
+              duration: 1,
+              ease: "easeOut"
+            }
+          },
+          style: {
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: '3.5rem',
+            fontWeight: 'bold',
+            zIndex: 10,
+            filter: 'url(#glow)',
+            color: '#fbbf24' // Amber-400
+          }
+        };
+      }
+
+      // Other words will be planets
+      const totalPlanets = words.length - 1;
+      const planetIndex = wordIndex - 1;
+      
+      // Calculate orbit properties
+      const minOrbitRadius = 120;
+      const orbitSpacing = 60;
+      const orbitRadius = minOrbitRadius + (planetIndex * orbitSpacing);
+      const orbitSpeed = 20 + (planetIndex * 5); // Outer planets move slower
+      const startAngle = (planetIndex * (360 / totalPlanets)) * (Math.PI / 180);
+      
+      // Calculate planet size (decreasing as they get further from sun)
+      const fontSize = 2.2 - (planetIndex * 0.15);
+      
+      return {
+        initial: { 
+          opacity: 0,
+          scale: 0
+        },
+        animate: { 
+          opacity: 1,
+          scale: 1,
+          transition: {
+            duration: 1,
+            delay: wordIndex * 0.2
+          }
+        },
+        style: {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          fontSize: `${fontSize}rem`,
+          zIndex: totalPlanets - planetIndex,
+          filter: 'url(#glow)',
+        }
+      };
+    },
+    word: (wordIndex: number) => {
+      if (wordIndex === 0) {
+        // Sun animation
+        return {
+          animate: {
+            scale: [1, 1.1, 1],
+            textShadow: [
+              "0 0 20px rgba(251, 191, 36, 0.7)",
+              "0 0 35px rgba(251, 191, 36, 0.9)",
+              "0 0 20px rgba(251, 191, 36, 0.7)"
+            ],
+            color: [
+              "#fbbf24",
+              "#f59e0b",
+              "#fbbf24"
+            ]
+          },
+          transition: { 
+            duration: 3,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }
+        };
+      }
+
+      // Planets animation
+      const totalPlanets = 10; // Maximum expected planets
+      const planetIndex = wordIndex - 1;
+      const orbitRadius = 120 + (planetIndex * 60);
+      const orbitDuration = 20 + (planetIndex * 5);
+      
+      return {
+        animate: {
+          x: [
+            orbitRadius * Math.cos(0),
+            orbitRadius * Math.cos(Math.PI / 2),
+            orbitRadius * Math.cos(Math.PI),
+            orbitRadius * Math.cos(3 * Math.PI / 2),
+            orbitRadius * Math.cos(2 * Math.PI)
+          ],
+          y: [
+            orbitRadius * Math.sin(0),
+            orbitRadius * Math.sin(Math.PI / 2),
+            orbitRadius * Math.sin(Math.PI),
+            orbitRadius * Math.sin(3 * Math.PI / 2),
+            orbitRadius * Math.sin(2 * Math.PI)
+          ],
+          rotate: [0, 360],
+          color: [
+            "#60a5fa", // Blue-400
+            "#818cf8", // Indigo-400
+            "#60a5fa"  // Blue-400
+          ],
+          textShadow: [
+            "0 0 8px rgba(96, 165, 250, 0.6)",
+            "0 0 12px rgba(129, 140, 248, 0.7)",
+            "0 0 8px rgba(96, 165, 250, 0.6)"
+          ]
+        },
+        transition: { 
+          duration: orbitDuration,
+          repeat: Infinity,
+          ease: "linear"
+        }
+      };
+    }
   }
 ];
 
@@ -798,6 +1178,16 @@ export default function Home() {
                     const containerProps = currentStyle.wordContainer(wordIndex, words, word);
                     const style = containerProps.style as MotionStyle;
                     
+                    // Transform the word if the style has a transformWord function
+                    const displayWord = (currentStyle as any).transformWord 
+                      ? (currentStyle as any).transformWord(word)
+                      : word;
+                    
+                    // Get word animation properties
+                    const wordAnimation = typeof currentStyle.word === 'function' 
+                      ? currentStyle.word(wordIndex)
+                      : currentStyle.word;
+                    
                     return (
                       <motion.div
                         key={wordIndex}
@@ -807,13 +1197,13 @@ export default function Home() {
                       >
                         <motion.span
                           className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 inline-block whitespace-nowrap"
-                          animate={currentStyle.word.animate}
+                          animate={wordAnimation.animate}
                           transition={{
-                            ...currentStyle.word.transition,
+                            ...wordAnimation.transition,
                             repeatType: "reverse"
                           }}
                         >
-                          {word}
+                          {displayWord}
                         </motion.span>
                       </motion.div>
                     );
